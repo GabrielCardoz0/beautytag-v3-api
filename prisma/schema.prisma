@@ -1,0 +1,206 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model users {
+  id            Int       @id @default(autoincrement())
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  name          String
+  password      String
+  email         String
+  confirmed     Boolean   @default(false)
+  blocked       Boolean   @default(false)
+  role          String
+  metadata      Json? 
+  pagarme_id    String?
+  appointments  appointments[]
+  services      services[]
+  plans         plans[]
+  invoices      invoices[]
+}
+
+model appointments {
+  id                    Int       @id @default(autoincrement())
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+  start_at              DateTime  
+  end_at                DateTime  
+  status                String
+  notes                 String
+  client_name           String
+  client_phone          String
+  user_id               Int
+  user                  users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "appointments_fk1")
+  appointments_services appointments_services[]
+}
+
+model appointments_services {
+  id              Int           @id @default(autoincrement())
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  appointment_id  Int
+  service_id      Int
+  appointments    appointments  @relation(fields: [appointment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "appointments_services_fk1")
+  services        services      @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "appointments_services_fk2")
+}
+
+model services {
+  id                    Int      @id @default(autoincrement())
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  user_id               Int
+  name                  String
+  spent_time            Int
+  description           String?
+  genre                 String
+  price                 Int
+  percent_colab         Int
+  percent_repasse       Int
+  preco_colab           Int
+  preco_parceiro        Int
+  lucro                 Int
+  is_active             Boolean @default(true)
+  is_complete           Boolean @default(false)
+  user                  users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "services_fk1")
+  forms_options         forms_options[]
+  plan_services         plan_services[]
+  appointments_services             appointments_services[]
+  forms_options_secondary_options   forms_options_secondary_options[]
+}
+
+// model checkins {
+//   id            Int       @id @default(autoincrement())
+//   created_at    DateTime  @default(now())
+//   updated_at    DateTime  @updatedAt
+//   hash          String
+//   estado        String
+//   telefone      String
+//   service       String
+//   dataReservada DateTime
+//   dataInicio    DateTime
+//   dataFim       DateTime
+// }
+
+model forms {
+  id            Int      @id @default(autoincrement())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  name          String
+  description   String?
+  forms_options forms_options[]
+}
+
+model forms_options {
+  id            Int         @id @default(autoincrement())
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+  service_id    Int
+  form_id       Int
+  form          forms       @relation(fields: [form_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "forms_options_fk1")
+  options       services    @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "forms_options_fk2")
+  forms_options_secondary_options forms_options_secondary_options[]
+}
+
+model forms_options_secondary_options {
+  id                Int           @id @default(autoincrement())
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+  service_id        Int
+  forms_options_id  Int
+  forms_options     forms_options @relation(fields: [forms_options_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "forms_options_secondary_options_fk1")
+  options           services      @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "forms_options_secondary_options_fk2")
+}
+
+model notifications {
+  id          Int      @id @default(autoincrement())
+  title       String
+  is_read     Boolean
+  user_id     Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model plans {
+  id            Int      @id @default(autoincrement())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  status        String
+  user_id       Int
+  users         users   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "plans_fk1")
+  plan_services plan_services[]
+}
+
+model plan_services {
+  id            Int      @id @default(autoincrement())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  frequency     String
+  plan_id       Int
+  service_id    Int
+  plan          plans    @relation(fields: [plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "plan_services_fk1")
+  service       services @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "plan_services_fk2")
+}
+
+model instance {
+  id            Int      @id @default(autoincrement())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  is_connected  Boolean
+  whatsapp      String?
+  evolution_id  String?
+  base64        String?
+}
+
+model bot {
+  id                  Int      @id @default(autoincrement())
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  is_active           Boolean
+  is_connected        Boolean
+  welcome_msg         String?
+  out_of_turn_msg     String?
+  response_time       Int?
+  start_time          Int?
+  end_time            Int?
+  name                String
+  behavior            String
+  company_description String
+}
+
+model invoices {
+  id                      Int       @id @default(autoincrement())
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+  user_id                 Int
+  amount                  Int
+  status                  String
+  payment_date            DateTime?
+  pagarme_transaction_id  String
+  user                    users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model chat_histories {
+  id              Int       @id @default(autoincrement())
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime? @db.Timestamp(6)
+  chat_id         String
+  role            String
+  content         String?
+  tool_calls      Json?
+  tool_call_id    String?
+  metadata        Json?
+  is_from_human   Boolean   @default(false)
+  @@index([chat_id, created_at])
+}
