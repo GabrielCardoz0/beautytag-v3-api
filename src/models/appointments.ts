@@ -122,7 +122,7 @@ async function findByUserAndInterval(userId: number, start: Date, end: Date) {
         { start_at: { lt: end } },
         { end_at: { gt: start } }
       ],
-      status: { not: "cancelado" }
+      status: { not: EnumStatus.cancelado }
     }
   });
 }
@@ -146,7 +146,7 @@ const getUpcomingByClientPhone = async (phone: string) => {
     where: {
       client_phone: phone,
       start_at: { gte: new Date() },
-      status: { not: "cancelado" },
+      status: { not: EnumStatus.cancelado },
     },
     orderBy: { start_at: "asc" },
     take: 3,

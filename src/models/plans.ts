@@ -46,7 +46,11 @@ async function create(data: Prisma.plansCreateInput) {
     include: {
       plan_services: {
         include: {
-          service: true
+          service: {
+            include: {
+              user: true
+            }
+          }
         }
       }
     }

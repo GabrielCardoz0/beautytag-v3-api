@@ -40,7 +40,7 @@ const handleEvent = async (params: {event: string, instance: string, data: any})
         const remoteJid = data.key.remoteJidAlt;
         const isFromMe = data.key.fromMe;
   
-        console.log("aqui");
+        console.log("aqui", JSON.stringify(data, null, 2));
   
         if(data.messageType !== "conversation") return
   

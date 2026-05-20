@@ -66,10 +66,11 @@ model services {
   description           String?
   genre                 String
   price                 Int
-  percent_colab         Int
-  percent_repasse       Int
-  preco_colab           Int
-  preco_parceiro        Int
+  percent_tax           Int
+  // percent_colab         Int
+  // percent_repasse       Int
+  // preco_colab           Int
+  // preco_parceiro        Int
   lucro                 Int
   is_active             Boolean @default(true)
   is_complete           Boolean @default(false)
@@ -126,8 +127,10 @@ model forms_options_secondary_options {
 model notifications {
   id          Int      @id @default(autoincrement())
   title       String
-  is_read     Boolean
-  user_id     Int
+  body        String?
+  type        String   @default("info")
+  is_read     Boolean  @default(false)
+  user_id     Int?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }

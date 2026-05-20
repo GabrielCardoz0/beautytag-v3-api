@@ -15,10 +15,11 @@ const ServiceCreateSchema = Joi.object<Partial<Prisma.servicesCreateInput> & { u
   genre: Joi.string().required(),
   spent_time: Joi.number().required(),
 
-  percent_colab: Joi.number().optional(),
-  percent_repasse: Joi.number().optional(),
-  preco_parceiro: Joi.number().optional(),
-  preco_colab: Joi.number().optional(),
+  percent_tax: Joi.number().optional(),
+  // percent_colab: Joi.number().optional(),
+  // percent_repasse: Joi.number().optional(),
+  // preco_parceiro: Joi.number().optional(),
+  // preco_colab: Joi.number().optional(),
   lucro: Joi.number().optional(),
   user_id: Joi.number().optional(),
 });
@@ -32,10 +33,11 @@ const ServiceUpdateSchema = Joi.object<Prisma.servicesUpdateInput>({
   is_complete: Joi.boolean().optional(),
   is_active: Joi.boolean().optional(),
 
-  percent_colab: Joi.number().optional(),
-  percent_repasse: Joi.number().optional(),
-  preco_parceiro: Joi.number().optional(),
-  preco_colab: Joi.number().optional(),
+  percent_tax: Joi.number().optional(),
+  // percent_colab: Joi.number().optional(),
+  // percent_repasse: Joi.number().optional(),
+  // preco_parceiro: Joi.number().optional(),
+  // preco_colab: Joi.number().optional(),
   lucro: Joi.number().optional(),
 });
 

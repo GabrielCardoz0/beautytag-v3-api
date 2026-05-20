@@ -156,6 +156,14 @@ async function getByServiceId(id: number) {
   });
 }
 
+async function findAdmin() {
+  return prisma.users.findFirst({
+    where: {
+      role: EnumRoles.admin
+    }
+  });
+}
+
 export const usersModel = {
   getByEmail,
   getById,
@@ -164,5 +172,6 @@ export const usersModel = {
   delete: deleteUser,
   getAll,
   getByWhatsapp,
-  getByServiceId
+  getByServiceId,
+  findAdmin,
 };

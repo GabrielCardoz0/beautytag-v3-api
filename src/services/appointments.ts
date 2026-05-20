@@ -2,8 +2,8 @@ import { Prisma } from "../generated/prisma/client";
 import { appointmentsModel, EnumStatus, IQueryPaginationDateRange } from "../models/appointments";
 import { servicesModel } from "../models/services";
 import { ICreateAppointment } from "../routers/appointments";
-import { EnumRoles } from "./middlewares/validate-role"; 
-import { usersService } from "./users";
+import { EnumRoles } from "./middlewares/validate-role";
+import { notificationsService, EnumNotificationType } from "./notifications";
 
 async function getAll(query: IQueryPaginationDateRange) {
   return await appointmentsModel.getAll(query);
@@ -73,12 +73,11 @@ async function update(user: { role: string, id: number }, appointment_id: number
 async function createFromBot(params: {
   partnerId: number;
   clientNumber: string;
+  clientName: string;
   serviceId: number;
   preferredAt: Date;
   durationMinutes: number;
 }) {
-  console.log("aqui");
-  // normalizar intervalo
   const start = params.preferredAt;
   const end = new Date(start.getTime() + params.durationMinutes * 60000);
 
@@ -89,14 +88,12 @@ async function createFromBot(params: {
     return { success: false, message: "Horário indisponível.", suggestions };
   }
 
-  const user = await usersService.getById(params.partnerId);
-
   const appointmentData: Prisma.appointmentsCreateInput = {
     start_at: start,
     end_at: end,
     status: EnumStatus.agendado,
     user: { connect: { id: params.partnerId } },
-    client_name: user.name,
+    client_name: params.clientName,
     client_phone: params.clientNumber,
     notes: "",
     appointments_services: {
@@ -104,10 +101,8 @@ async function createFromBot(params: {
     }
   };
 
-  console.log(JSON.stringify(appointmentData, null, 2));
-
   const created = await appointmentsModel.create(appointmentData);
-  console.log(create);
+
   return { success: true, appointment: created };
 }
 

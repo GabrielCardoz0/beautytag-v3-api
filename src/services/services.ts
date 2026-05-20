@@ -53,11 +53,12 @@ async function create(user: { id: number, role: string }, payload: Prisma.servic
   data.is_complete = user.role === EnumRoles.admin
 
   if(user.role !== EnumRoles.admin) {
-    data.percent_colab = 0
-    data.percent_repasse = 0
-    data.preco_parceiro = 0
-    data.preco_colab = 0
-    data.lucro = 0
+    throw new Error("Apenas administradores podem criar serviços. Por favor, entre em contato com um administrador para criar um serviço para você.");
+    // data.percent_colab = 0
+    // data.percent_repasse = 0
+    // data.preco_parceiro = 0
+    // data.preco_colab = 0
+    // data.lucro = 0
   }
 
   return servicesModel.create(data);

@@ -14,6 +14,8 @@ async function login({  email, password }: { email: string, password: string }) 
 
   const isValidPassword = await verifyPassword({ password, comparePassword: findedUser.password });
 
+  // console.log(isValidPassword, password, findedUser.password);
+
   if(!isValidPassword) {
     throw new Error("Senha ou email incorreto.");
   }
@@ -26,7 +28,7 @@ export function hashPassword(password: string) {
 }
 
 export async function verifyPassword({ password, comparePassword }: { password: string, comparePassword: string }) {
-  return password === comparePassword
+  // return password === comparePassword
   return await bcrypt.compare(password, comparePassword);
 }
 

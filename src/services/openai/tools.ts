@@ -8,52 +8,6 @@ import { plansService } from "../plans";
 import { servicesService } from "../services";
 import { usersService } from "../users";
 
-// export const tools = [
-//   {
-//     type: "function",
-//     function: {
-//       name: "callHuman",
-//       description: "Chama um humano para responder as mensagens caso o usuário solicite ou caso você não tenha capacidade para responder",
-//       parameters: {
-//         type: "object",
-//         properties: {
-//           text: { type: "string", description: "Resumo da conversa tida para gerar um contexto, e melhorar o entendimento do que houve. Sempre passar o máximo de informações possíveis sobre o cliente." },
-//         },
-//         required: ["text"],
-//       },
-//     },
-//   },
-
-//   {
-//     type: "function",
-//     function: {
-//       name: "scheduleAppointment",
-//       description: "Agenda um serviço para um cliente via WhatsApp. Valida parceiro e conflitos de horário.",
-//       parameters: {
-//         type: "object",
-//         properties: {
-//           whatsapp: { type: "string", description: "Número do cliente (ex: 5511999999999)" },
-//           name: { type: "string", description: "Nome do cliente" },
-//           service_id: { type: "number", description: "ID do serviço a agendar" },
-//           preferred_datetime: { type: "string", description: "Data/hora ISO (ex: 2026-05-01T14:00:00Z)" }
-//         },
-//         required: ["whatsapp", "name", "service_id", "preferred_datetime"],
-//       },
-//     },
-//   },
-
-//   /*
-//   tools a serem adicionadas
-
-//   buscar usuário por whatsapp
-//   buscar plano do usuário
-//   buscar parceiros do cliente
-//   buscar agendamentos do parceiro
-//   buscar serviços do parceiro
-//   */
-// ]
-
-
 export const tools = [
 
   {
@@ -109,7 +63,7 @@ export const tools = [
         properties: {
           user_id: {
             type: "number",
-            description: "ID interno do usuário/cliente obtido via getUserByWhatsapp",
+            description: "ID interno do usuário/cliente obtido via getClientByWhatsapp",
           },
         },
         required: ["user_id"],
@@ -170,118 +124,65 @@ export const tools = [
 
   // ─── Agendamentos ─────────────────────────────────────────────────────────────
 
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "getAvailableSlots",
-  //     description:
-  //       "Calcula e retorna os horários livres de um parceiro para um serviço específico em uma data. Leva em conta os agendamentos existentes e a duração do serviço. Use ANTES de scheduleAppointment para sugerir opções concretas ao cliente.",
-  //     parameters: {
-  //       type: "object",
-  //       properties: {
-  //         partner_whatsapp: {
-  //           type: "string",
-  //           description: "Número de WhatsApp do parceiro no formato E.164 sem '+'",
-  //         },
-  //         service_id: {
-  //           type: "number",
-  //           description: "ID do serviço para calcular duração do slot",
-  //         },
-  //         date: {
-  //           type: "string",
-  //           description:
-  //             "Data desejada pelo cliente no formato YYYY-MM-DD (ex: 2026-05-10)",
-  //         },
-  //       },
-  //       required: ["partner_whatsapp", "service_id", "date"],
-  //     },
-  //   },
-  // },
+  {
+    type: "function",
+    function: {
+      name: "scheduleAppointment",
+      description:
+        "Agenda um serviço para um cliente. Só chame esta tool após o cliente confirmar explicitamente o serviço, o parceiro e o horário. Use getPartnerAppointments antes para confirmar disponibilidade.",
+      parameters: {
+        type: "object",
+        properties: {
+          whatsapp: {
+            type: "string",
+            description: "Número do cliente no formato E.164 sem '+' (ex: 5511999999999)",
+          },
+          name: {
+            type: "string",
+            description: "Nome completo do cliente para registrar no agendamento",
+          },
+          partner_whatsapp: {
+            type: "string",
+            description: "Número de WhatsApp do parceiro que irá atender",
+          },
+          service_id: {
+            type: "number",
+            description: "ID do serviço a ser agendado",
+          },
+          preferred_datetime: {
+            type: "string",
+            description:
+              "Data e hora exata confirmada pelo cliente em ISO 8601 (ex: 2026-05-10T14:00:00Z)",
+          },
+        },
+        required: ["whatsapp", "name", "partner_whatsapp", "service_id", "preferred_datetime"],
+      },
+    },
+  },
 
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "scheduleAppointment",
-  //     description:
-  //       "Agenda um serviço para um cliente. Chame getAvailableSlots antes para confirmar que o horário está livre. Só chame esta tool após o cliente confirmar explicitamente o serviço, o parceiro e o horário.",
-  //     parameters: {
-  //       type: "object",
-  //       properties: {
-  //         whatsapp: {
-  //           type: "string",
-  //           description: "Número do cliente no formato E.164 sem '+' (ex: 5511999999999)",
-  //         },
-  //         name: {
-  //           type: "string",
-  //           description: "Nome completo do cliente para registrar no agendamento",
-  //         },
-  //         partner_whatsapp: {
-  //           type: "string",
-  //           description: "Número de WhatsApp do parceiro que irá atender",
-  //         },
-  //         service_id: {
-  //           type: "number",
-  //           description: "ID do serviço a ser agendado",
-  //         },
-  //         preferred_datetime: {
-  //           type: "string",
-  //           description:
-  //             "Data e hora exata confirmada pelo cliente em ISO 8601 (ex: 2026-05-10T14:00:00Z)",
-  //         },
-  //       },
-  //       required: ["whatsapp", "name", "partner_whatsapp", "service_id", "preferred_datetime"],
-  //     },
-  //   },
-  // },
-
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "cancelAppointment",
-  //     description:
-  //       "Cancela um agendamento existente do cliente a partir do ID. Use quando o cliente solicitar cancelamento. Sempre confirme o nome do serviço e a data/hora com o cliente antes de chamar esta tool.",
-  //     parameters: {
-  //       type: "object",
-  //       properties: {
-  //         appointment_id: {
-  //           type: "number",
-  //           description: "ID do agendamento a ser cancelado",
-  //         },
-  //         reason: {
-  //           type: "string",
-  //           description: "Motivo do cancelamento informado pelo cliente (opcional, para registro em notes)",
-  //         },
-  //       },
-  //       required: ["appointment_id"],
-  //     },
-  //   },
-  // },
-
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "rescheduleAppointment",
-  //     description:
-  //       "Reagenda um agendamento existente para uma nova data/hora. Equivale a cancelar e criar, mas preserva o vínculo com o serviço e o parceiro originais. Chame getAvailableSlots antes para confirmar disponibilidade no novo horário.",
-  //     parameters: {
-  //       type: "object",
-  //       properties: {
-  //         appointment_id: {
-  //           type: "number",
-  //           description: "ID do agendamento atual que será reagendado",
-  //         },
-  //         new_datetime: {
-  //           type: "string",
-  //           description:
-  //             "Nova data e hora confirmada pelo cliente em ISO 8601 (ex: 2026-05-15T10:00:00Z)",
-  //         },
-  //       },
-  //       required: ["appointment_id", "new_datetime"],
-  //     },
-  //   },
-  // },
+  {
+    type: "function",
+    function: {
+      name: "cancelAppointment",
+      description:
+        "Cancela um agendamento existente do cliente a partir do ID. Use quando o cliente solicitar cancelamento. Sempre confirme o nome do serviço e a data/hora com o cliente antes de chamar esta tool.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointment_id: {
+            type: "number",
+            description: "ID do agendamento a ser cancelado",
+          },
+          reason: {
+            type: "string",
+            description: "Motivo do cancelamento informado pelo cliente (opcional)",
+          },
+        },
+        required: ["appointment_id"],
+      },
+    },
+  },
 ];
-
 
 
 const handleCallHuman = async (params: {
@@ -289,8 +190,9 @@ const handleCallHuman = async (params: {
   text: string;
 }): Promise<{ success: boolean; message: string }> => {
   try {
+    const managerNumber = process.env.MANAGER_WHATSAPP_NUMBER!;
     await evolutionApiService.sendMessage({
-      number: "5511994703386@s.whatsapp.net",
+      number: managerNumber,
       text: params.text,
     });
     return { success: true, message: "Um humano foi chamado." };
@@ -300,13 +202,13 @@ const handleCallHuman = async (params: {
 };
 
 const handleScheduleAppointment = async (args: {
-  client_number: string;
+  whatsapp: string;
+  name: string;
   partner_whatsapp: string;
   service_id: number;
   preferred_datetime: string;
-  duration_minutes?: number;
 }) => {
-  const clientNumber = formatWhatsAppNumber(args.client_number);
+  const clientNumber = formatWhatsAppNumber(args.whatsapp);
   const partnerWhatsapp = formatWhatsAppNumber(args.partner_whatsapp);
 
   const partner = await usersService.getByWhatsapp(partnerWhatsapp);
@@ -326,14 +228,41 @@ const handleScheduleAppointment = async (args: {
   return appointmentsService.createFromBot({
     partnerId: partner.id,
     clientNumber,
+    clientName: args.name,
     serviceId: args.service_id,
     preferredAt: new Date(args.preferred_datetime),
-    durationMinutes: args.duration_minutes ?? service.spent_time ?? 60,
+    durationMinutes: service.spent_time ?? 60,
   });
 };
 
+const handleCancelAppointment = async (args: {
+  appointment_id: number;
+  reason?: string;
+}): Promise<object> => {
+  try {
+    const appointment = await appointmentsService.getById(args.appointment_id);
+
+    if (!appointment) {
+      return { success: false, message: "Agendamento não encontrado." };
+    }
+
+    if (appointment.status === "Cancelado") {
+      return { success: false, message: "Este agendamento já está cancelado." };
+    }
+
+    await appointmentsService.update(
+      { role: "admin", id: 0 },
+      args.appointment_id,
+      { status: "Cancelado", notes: args.reason ?? "" }
+    );
+
+    return { success: true, message: "Agendamento cancelado com sucesso." };
+  } catch {
+    return { success: false, message: "Erro ao cancelar agendamento." };
+  }
+};
+
 const getClientByWhatsapp = async (params: { whatsapp: string; }): Promise<object> => {
-  console.log("chegou aqui", params);
   try {
     const number = formatWhatsAppNumber(params.whatsapp);
     const user = await usersService.getByWhatsapp(number);
@@ -366,16 +295,15 @@ const getClientPlan = async (params: { user_id: number; }): Promise<object> => {
 
     return {
       found: true,
-      // plan_id: plan.id,
-      // status: plan.status,
-      // services: plan.plan_services?.map((ps) => ({
-      //   service_id: ps.service_id,
-      //   service_name: ps.service?.name,
-      //   frequency: ps.frequency,
-      //   duration_minutes: ps.service?.spent_time,
-      //   price: ps.service?.price,
-      // })) ?? [],
-      ...plan
+      plan_id: plan.id,
+      status: plan.status,
+      services: plan.plan_services?.map((ps) => ({
+        service_id: ps.service_id,
+        service_name: ps.service?.name,
+        frequency: ps.frequency,
+        duration_minutes: ps.service?.spent_time,
+        price: ps.service?.price,
+      })) ?? [],
     };
   } catch {
     return { found: false, message: "Erro ao buscar plano do cliente." };
@@ -436,7 +364,7 @@ const getPartnerAppointments = async (params: {
       found: true,
       partner_id: partner.id,
       partner_name: partner.name,
-      ...appointments
+      appointments,
     };
   } catch {
     return { found: false, message: "Erro ao buscar agendamentos do parceiro." };
@@ -446,6 +374,7 @@ const getPartnerAppointments = async (params: {
 
 export const toolHandlers: Record<string, (args: any) => Promise<any>> = {
   scheduleAppointment: handleScheduleAppointment,
+  cancelAppointment: handleCancelAppointment,
   callHuman: handleCallHuman,
   getClientByWhatsapp,
   getClientPlan,

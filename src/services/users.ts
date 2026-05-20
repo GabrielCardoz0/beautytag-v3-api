@@ -5,6 +5,7 @@ import { ICreateParceiro, IUpdateParceiro } from "../routers/users";
 import { EnumRoles } from "./middlewares/validate-role";
 import { authService } from "./auth";
 import { pagarmeApi } from "./pagarme/api";
+import { notificationsService, EnumNotificationType } from "./notifications";
 
 async function getAll(query?: IQueryPagination) {
   return await usersModel.getAll(query);
@@ -45,7 +46,16 @@ async function create(payload: ICreateParceiro) {
     role: EnumRoles.parceiro
   };
 
-  return usersModel.create(data);
+  const user = await usersModel.create(data);
+
+  notificationsService.create({
+    title: "Novo parceiro cadastrado",
+    body: `${payload.name} (${payload.email}) cadastrado.`,
+    type: EnumNotificationType.info,
+    user_id: user.id,
+  }).catch(() => {});
+
+  return user;
 }
 
 async function update(id: number, payload: IUpdateParceiro) {
@@ -80,6 +90,24 @@ async function getByWhatsapp(whatsapp: string) {
   return usersModel.getByWhatsapp(normalized);
 }
 
+async function createFirstAdminUser() {
+  
+  const alredyExistAdmin = await usersModel.findAdmin();
+
+  !alredyExistAdmin && console.log("Criando usuário admin...");
+  
+  const newUser = {
+    email: "gabriel@gmail.com",
+    name: "Gabriel",
+    role: EnumRoles.admin,
+    password: await authService.hashPassword("gabriel")
+  }
+
+  !alredyExistAdmin && await usersModel.create(newUser)
+  
+  !alredyExistAdmin && console.log("usuário admin criado!");
+}
+
 
 export const usersService = {
   getAll,
@@ -89,4 +117,5 @@ export const usersService = {
   create,
   update,
   getByWhatsapp,
+  createFirstAdminUser,
 };
