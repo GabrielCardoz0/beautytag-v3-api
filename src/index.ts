@@ -55,7 +55,6 @@ app
 
   .listen(process.env.PORT ?? 5000, () => {
     botService.createBot();
-    usersService.createFirstAdminUser();
     startCronJobs();
     console.log(`API is running on port: ${process.env.PORT ?? 4000}`)
   });

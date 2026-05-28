@@ -38,7 +38,7 @@ model appointments {
   start_at              DateTime  
   end_at                DateTime  
   status                String
-  notes                 String
+  notes                 String?
   client_name           String
   client_phone          String
   user_id               Int

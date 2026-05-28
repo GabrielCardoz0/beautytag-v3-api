@@ -39,28 +39,22 @@ const handleEvent = async (params: {event: string, instance: string, data: any})
         const message = data.message.conversation;
         const remoteJid = data.key.remoteJidAlt;
         const isFromMe = data.key.fromMe;
-  
-        console.log("aqui", JSON.stringify(data, null, 2));
-  
+    
         if(data.messageType !== "conversation") return
-  
-        // console.log('messages.upsert', instance, data);
-  
+    
         const [ number, type ] = remoteJid?.split("@") ?? [];
   
         if(type !== "s.whatsapp.net") return;
   
         // const user = await usersService.getByWhatsapp(number);
   
-        if(number === '5511994703386') {
-          console.log("OI");
-          const botResponse = await getAgentResponse(remoteJid, message, number)
-          evolutionApiService.sendMessage({
-            number: remoteJid,
-            text: botResponse ?? "resposta automática teste"
-          });
-        }
-  
+        const botResponse = await getAgentResponse(remoteJid, message, number);
+
+        evolutionApiService.sendMessage({
+          number: remoteJid,
+          text: botResponse ?? "Perdão, não consegui entender sua mensagem. Poderia reformular ou tentar novamente mais tarde?"
+        });
+
         break;
   
       default:

@@ -90,24 +90,6 @@ async function getByWhatsapp(whatsapp: string) {
   return usersModel.getByWhatsapp(normalized);
 }
 
-async function createFirstAdminUser() {
-  
-  const alredyExistAdmin = await usersModel.findAdmin();
-
-  !alredyExistAdmin && console.log("Criando usuário admin...");
-  
-  const newUser = {
-    email: "gabriel@gmail.com",
-    name: "Gabriel",
-    role: EnumRoles.admin,
-    password: await authService.hashPassword("gabriel")
-  }
-
-  !alredyExistAdmin && await usersModel.create(newUser)
-  
-  !alredyExistAdmin && console.log("usuário admin criado!");
-}
-
 
 export const usersService = {
   getAll,
@@ -117,5 +99,4 @@ export const usersService = {
   create,
   update,
   getByWhatsapp,
-  createFirstAdminUser,
 };

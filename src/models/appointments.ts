@@ -61,7 +61,7 @@ async function get(user_id: number, query: IQueryPaginationDateRange) {
         gte: query.start_at,
         lte: query.end_at,
       },
-      // user_id,
+      user_id,
     },
     orderBy: [
       { start_at: "asc" },

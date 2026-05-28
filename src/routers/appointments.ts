@@ -29,8 +29,8 @@ const AppointmentsSchema = Joi.object<ICreateAppointment>({
 appointmentsRouter
   .use(authenticateToken)
   .get("/", validateRole([EnumRoles.admin, EnumRoles.parceiro]), appointmentsController.get)
-  .post("/", validateRole([EnumRoles.admin, EnumRoles.colaborador, EnumRoles.bot]), validateBody(AppointmentsSchema), appointmentsController.create)
-  .put("/", validateRole([EnumRoles.admin, EnumRoles.colaborador, EnumRoles.bot]), validateBody(AppointmentsSchema), appointmentsController.create)
-  .delete("/:id", validateRole([EnumRoles.admin, EnumRoles.colaborador, EnumRoles.bot]), appointmentsController.delete);
+  .post("/", validateRole([EnumRoles.admin, EnumRoles.parceiro, EnumRoles.bot]), validateBody(AppointmentsSchema), appointmentsController.create)
+  .put("/", validateRole([EnumRoles.admin, EnumRoles.parceiro, EnumRoles.bot]), validateBody(AppointmentsSchema), appointmentsController.update)
+  .delete("/:id", validateRole([EnumRoles.admin, EnumRoles.parceiro, EnumRoles.bot]), appointmentsController.delete);
 
 export { appointmentsRouter };
