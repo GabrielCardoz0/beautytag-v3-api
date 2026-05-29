@@ -2,6 +2,7 @@ import { prisma } from "../config/prisma";
 import { Prisma } from "../generated/prisma/client";
 import { plansModel } from "../models/plans";
 import { IQueryPagination } from "../models/services";
+import { usersModel } from "../models/users";
 import { ICreatePlan } from "../routers/plans";
 import { authService } from "./auth";
 import { evolutionApiService } from "./evolution/service";
@@ -10,6 +11,7 @@ import { EnumRoles } from "./middlewares/validate-role";
 import { notificationsService, EnumNotificationType } from "./notifications";
 import { pagarmeApi } from "./pagarme/api";
 import { servicesService } from "./services";
+import { usersService } from "./users";
 
 export enum EnumPlanStatus {
   ativo = "Ativo",
@@ -30,9 +32,10 @@ async function get(query?: IQueryPagination) {
 }
 
 async function deletePlan(plan_id: number) {
-  await getById(plan_id);
+  const plan = await getById(plan_id);
+  plansModel.delete(plan_id);
+  await usersService.delete(plan.user_id)
 
-  return plansModel.delete(plan_id);
 }
 
 async function create(payload: ICreatePlan) {

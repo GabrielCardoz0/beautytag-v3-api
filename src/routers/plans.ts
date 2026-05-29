@@ -57,5 +57,6 @@ plansRouter
   .get("/:id", validateRole([EnumRoles.admin]), plansController.getById)
   .post("/:id", validateRole([EnumRoles.admin]), validateBody(AddServicePlanSchema), plansController.addService)
   .delete("/:id/:planServiceId", validateRole([EnumRoles.admin]), plansController.removeService)
+  .delete("/:id", validateRole([EnumRoles.admin]), plansController.delete)
 
 export { plansRouter };

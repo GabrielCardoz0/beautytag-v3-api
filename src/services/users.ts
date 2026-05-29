@@ -30,9 +30,9 @@ async function getMe(id: number) {
 }
 
 async function deleteUser(id: number) {
-  const user = await getById(id);
+  // const user = await getById(id);
 
-  if(user.role === EnumRoles.admin) throw new Error("Não foi possível deletar este usuário.");
+  // if(user.role === EnumRoles.admin) throw new Error("Não foi possível deletar este usuário.");
 
   return await usersModel.delete(id);
 }

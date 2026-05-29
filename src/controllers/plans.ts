@@ -43,7 +43,7 @@ async function update(req: AuthenticatedRequest, res: Response, next: NextFuncti
   }
 }
 
-async function deleteService(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+async function deletePlan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     await plansService.delete(Number(req.params.id));
 
@@ -78,7 +78,7 @@ export const plansController = {
   getById,
   create,
   update,
-  delete: deleteService,
+  delete: deletePlan,
   addService,
   removeService,
 }
