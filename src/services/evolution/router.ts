@@ -16,6 +16,16 @@ evolutionRouter
     }
   })
 
+  .delete("/instance", async (req, res) => {
+    try {
+      await evolutionApiService.deleteInstance();
+      return res.send({ message: 'Instância deletada com sucesso' });
+    } catch (error: any) {
+      console.log(error);
+      return res.status(400).send({ message: error.response?.data ?? error.message ?? 'Erro durante a requisição' });
+    }
+  })
+
   .post("/webhooks", async (req, res) => {
     try {
       await evolutionWebhooks.handleEvent(req.body);

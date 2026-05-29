@@ -3,6 +3,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 import { instanceModel } from "../../models/instance";
 import { formatWhatsAppNumber } from "../../config/utils";
+import { botService } from "../bot";
 dotenv.config();
 
 const instanceName = 'myWhatsapp';
@@ -75,7 +76,17 @@ const sendMessage = async ({ text, number }: { number: string, text: string }) =
   return evolutionApi.post(`/message/sendText/${instanceName}`, { number: formatedNumber, text });
 }
 
+const deleteInstance = async () => {
+  const instance = await instanceModel.get();
+  if (!instance) throw new Error('Nenhuma instância encontrada');
+
+  await evolutionApi.delete(`/instance/delete/${instance.evolution_id}`);
+  await instanceModel.delete();
+  await botService.update({ is_connected: false });
+}
+
 export const evolutionApiService = {
   getQrCode,
-  sendMessage
+  sendMessage,
+  deleteInstance
 }
