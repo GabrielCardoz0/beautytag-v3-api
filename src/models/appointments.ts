@@ -175,7 +175,7 @@ const getByPartnerAndDateRange = async (partnerId: number, start: Date, end: Dat
         { start_at: { lt: end } },
         { end_at: { gt: start } }
       ],
-      status: { not: "cancelado" }
+      status: { not: EnumStatus.cancelado }
     },
     include: {
       user: true,

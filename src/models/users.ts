@@ -62,6 +62,8 @@ async function getByWhatsapp(whatsapp: string) {
     },
   });
 
+  if (!user) return null;
+
   // Alias: remapeia `users` para `prestador` dentro de cada service
   const result = {
     ...user,

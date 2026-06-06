@@ -208,19 +208,25 @@ const handleScheduleAppointment = async (args: {
   service_id: number;
   preferred_datetime: string;
 }) => {
-  const clientNumber = formatWhatsAppNumber(args.whatsapp);
+  // Strips @s.whatsapp.net so client_phone matches what fetchUserContext receives
+  const clientNumber = formatWhatsAppNumber(args.whatsapp).split("@")[0];
   const partnerWhatsapp = formatWhatsAppNumber(args.partner_whatsapp);
 
   const partner = await usersService.getByWhatsapp(partnerWhatsapp);
 
-  if (!partner) {
+  if (!partner || !partner.id) {
     return { success: false, message: "Parceiro não encontrado." };
   }
   if (!partner.confirmed || partner.role !== "colaborador") {
     return { success: false, message: "Parceiro não ativo/válido para agendamentos." };
   }
 
-  const service = await servicesService.getById(args.service_id);
+  let service;
+  try {
+    service = await servicesService.getById(args.service_id);
+  } catch {
+    return { success: false, message: "Serviço não encontrado para este parceiro." };
+  }
   if (!service || service.user_id !== partner.id) {
     return { success: false, message: "Serviço não encontrado para este parceiro." };
   }
@@ -318,9 +324,15 @@ const getPartnerByServiceId = async (params: { service_id: number; }): Promise<o
       return { found: false, message: "Nenhum parceiro disponível." };
     }
 
+    const metadata = partner.metadata as { whatsapp?: string } | null;
+
     return {
       found: true,
-      ...partner
+      id: partner.id,
+      name: partner.name,
+      whatsapp: metadata?.whatsapp ?? null,
+      role: partner.role,
+      confirmed: partner.confirmed,
     };
   } catch {
     return { found: false, message: "Erro ao buscar parceiros." };
