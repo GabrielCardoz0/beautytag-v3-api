@@ -41,16 +41,27 @@ const handleEvent = async (params: {event: string, instance: string, data: any})
         const message = data.message.conversation;
         const remoteJid = data.key.remoteJidAlt;
         const isFromMe = data.key.fromMe;
+        // here
+        // const isFromMe = false;
+
 
         if(data.messageType !== "conversation" || isFromMe) return
 
         const [ number, type ] = remoteJid?.split("@") ?? [];
 
+        // here!!!!!!
+        // if(number != 5511994703386) return
+
         if(type !== "s.whatsapp.net") return;
 
         const bot = await botModel.get();
 
+
         if (!bot?.is_active || !bot?.is_connected) return;
+
+        // here!!!!!
+        // if(number != 5511994703386) return
+
 
         if (bot.start_time != null && bot.end_time != null) {
           const now = new Date();

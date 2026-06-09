@@ -188,6 +188,28 @@ const getByPartnerAndDateRange = async (partnerId: number, start: Date, end: Dat
   });
 }
 
+const countByClientPhoneAndServiceInMonth = async (
+  clientPhone: string,
+  serviceId: number,
+  referenceDate: Date
+): Promise<number> => {
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth();
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+  return prisma.appointments.count({
+    where: {
+      client_phone: clientPhone,
+      status: { not: EnumStatus.cancelado },
+      start_at: { gte: startOfMonth, lte: endOfMonth },
+      appointments_services: {
+        some: { service_id: serviceId },
+      },
+    },
+  });
+};
+
 export const appointmentsModel = {
   get,
   getById,
@@ -199,5 +221,6 @@ export const appointmentsModel = {
   findNextAvailableSlots,
   getUpcomingByClientPhone,
   countPastByClientPhone,
-  getByPartnerAndDateRange
+  getByPartnerAndDateRange,
+  countByClientPhoneAndServiceInMonth,
 };

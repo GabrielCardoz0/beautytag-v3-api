@@ -31,9 +31,13 @@ const executeToolCall = async (toolCall: ToolCall): Promise<string> => {
   const args = JSON.parse(toolCall.function.arguments);
   const handler = toolHandlers[toolCall.function.name];
 
+  console.log(`[BOT][TOOL_CALL] name=${toolCall.function.name} args=${JSON.stringify(args)}`);
+
   const result = handler
     ? await handler(args)
     : { error: `Função não implementada: ${toolCall.function.name}` };
+
+  console.log(`[BOT][TOOL_RESULT] name=${toolCall.function.name} result=${JSON.stringify(result)}`);
 
   return JSON.stringify(result);
 };
@@ -111,7 +115,20 @@ const buildSystemPrompt = (
 ): string => {
   if (!bot) return "";
 
+  const now = new Date();
+  const currentDatetime = now.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const currentIso = now.toISOString();
+
   const lines = [
+    `Data e hora atual: [${currentDatetime}] (ISO 8601: ${currentIso}) — use SEMPRE esta data como referência para qualquer agendamento. NUNCA use datas do passado.`,
     `Nome: [${bot.name}]`,
     `Comportamento: [${bot.behavior}]`,
     `Descrição da empresa: [${bot.company_description}]`,

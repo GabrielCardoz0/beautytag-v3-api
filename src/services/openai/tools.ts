@@ -208,37 +208,44 @@ const handleScheduleAppointment = async (args: {
   service_id: number;
   preferred_datetime: string;
 }) => {
-  // Strips @s.whatsapp.net so client_phone matches what fetchUserContext receives
+  console.log(`[BOT][scheduleAppointment] args recebidos: ${JSON.stringify(args)}`);
+
   const clientNumber = formatWhatsAppNumber(args.whatsapp).split("@")[0];
-  const partnerWhatsapp = formatWhatsAppNumber(args.partner_whatsapp);
+  console.log(`[BOT][scheduleAppointment] clientNumber=${clientNumber}`);
 
-  const partner = await usersService.getByWhatsapp(partnerWhatsapp);
+  // Busca parceiro pelo service_id (evita depender da busca por WhatsApp com filtro de role incorreto)
+  const partnerByService = await usersModel.getByServiceId(args.service_id);
+  console.log(`[BOT][scheduleAppointment] partnerByService=${JSON.stringify(partnerByService)}`);
 
-  if (!partner || !partner.id) {
-    return { success: false, message: "Parceiro não encontrado." };
+  if (!partnerByService || !partnerByService.id) {
+    return { success: false, message: "Parceiro não encontrado para este serviço." };
   }
-  if (!partner.confirmed || partner.role !== "colaborador") {
+  if (!partnerByService.confirmed) {
     return { success: false, message: "Parceiro não ativo/válido para agendamentos." };
   }
 
   let service;
   try {
     service = await servicesService.getById(args.service_id);
+    console.log(`[BOT][scheduleAppointment] service=${JSON.stringify(service)}`);
   } catch {
     return { success: false, message: "Serviço não encontrado para este parceiro." };
   }
-  if (!service || service.user_id !== partner.id) {
-    return { success: false, message: "Serviço não encontrado para este parceiro." };
+  if (!service || service.user_id !== partnerByService.id) {
+    console.log(`[BOT][scheduleAppointment] service.user_id=${service?.user_id} != partner.id=${partnerByService.id}`);
+    return { success: false, message: "Serviço não pertence a este parceiro." };
   }
 
-  return appointmentsService.createFromBot({
-    partnerId: partner.id,
+  const result = await appointmentsService.createFromBot({
+    partnerId: partnerByService.id,
     clientNumber,
     clientName: args.name,
     serviceId: args.service_id,
     preferredAt: new Date(args.preferred_datetime),
     durationMinutes: service.spent_time ?? 60,
   });
+  console.log(`[BOT][scheduleAppointment] resultado createFromBot: ${JSON.stringify(result)}`);
+  return result;
 };
 
 const handleCancelAppointment = async (args: {
@@ -271,7 +278,9 @@ const handleCancelAppointment = async (args: {
 const getClientByWhatsapp = async (params: { whatsapp: string; }): Promise<object> => {
   try {
     const number = formatWhatsAppNumber(params.whatsapp);
+    console.log(`[BOT][getClientByWhatsapp] buscando number=${number}`);
     const user = await usersService.getByWhatsapp(number);
+    console.log(`[BOT][getClientByWhatsapp] resultado=${JSON.stringify(user)}`);
 
     if (!user) {
       return { found: false, message: "Cliente não encontrado." };
@@ -286,7 +295,8 @@ const getClientByWhatsapp = async (params: { whatsapp: string; }): Promise<objec
       confirmed: user.confirmed,
       blocked: user.blocked,
     };
-  } catch {
+  } catch (err) {
+    console.log(`[BOT][getClientByWhatsapp] erro: ${err}`);
     return { found: false, message: "Erro ao buscar cliente." };
   }
 };
@@ -318,7 +328,9 @@ const getClientPlan = async (params: { user_id: number; }): Promise<object> => {
 
 const getPartnerByServiceId = async (params: { service_id: number; }): Promise<object> => {
   try {
+    console.log(`[BOT][getPartnerByServiceId] service_id=${params.service_id}`);
     const partner = await usersModel.getByServiceId(params.service_id);
+    console.log(`[BOT][getPartnerByServiceId] resultado=${JSON.stringify(partner)}`);
 
     if (!partner) {
       return { found: false, message: "Nenhum parceiro disponível." };
@@ -334,7 +346,8 @@ const getPartnerByServiceId = async (params: { service_id: number; }): Promise<o
       role: partner.role,
       confirmed: partner.confirmed,
     };
-  } catch {
+  } catch (err) {
+    console.log(`[BOT][getPartnerByServiceId] erro: ${err}`);
     return { found: false, message: "Erro ao buscar parceiros." };
   }
 };
@@ -345,6 +358,7 @@ const getPartnerAppointments = async (params: {
   date_to?: string;
 }): Promise<object> => {
   try {
+    console.log(`[BOT][getPartnerAppointments] params=${JSON.stringify(params)}`);
     const partner = await usersService.getById(params.partner_id);
 
     if (!partner) {
@@ -363,6 +377,7 @@ const getPartnerAppointments = async (params: {
     );
 
     if (!appointments?.length) {
+      console.log(`[BOT][getPartnerAppointments] nenhum agendamento encontrado para partner_id=${partner.id}`);
       return {
         found: true,
         partner_id: partner.id,
@@ -372,13 +387,15 @@ const getPartnerAppointments = async (params: {
       };
     }
 
+    console.log(`[BOT][getPartnerAppointments] encontrados ${appointments.length} agendamentos: ${JSON.stringify(appointments)}`);
     return {
       found: true,
       partner_id: partner.id,
       partner_name: partner.name,
       appointments,
     };
-  } catch {
+  } catch (err) {
+    console.log(`[BOT][getPartnerAppointments] erro: ${err}`);
     return { found: false, message: "Erro ao buscar agendamentos do parceiro." };
   }
 };

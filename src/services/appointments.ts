@@ -4,6 +4,8 @@ import { servicesModel } from "../models/services";
 import { ICreateAppointment } from "../routers/appointments";
 import { EnumRoles } from "./middlewares/validate-role";
 import { notificationsService, EnumNotificationType } from "./notifications";
+import { usersService } from "./users";
+import { EnumPlanStatus } from "./plans";
 
 async function getAll(query: IQueryPaginationDateRange) {
   return await appointmentsModel.getAll(query);
@@ -78,6 +80,33 @@ async function createFromBot(params: {
   preferredAt: Date;
   durationMinutes: number;
 }) {
+  // Verifica limite de frequência mensal do plano do cliente
+  const clientUser = await usersService.getByWhatsapp(params.clientNumber);
+  if (clientUser) {
+    const activePlan = clientUser.plans?.find((p) => p.status === EnumPlanStatus.ativo);
+    if (activePlan) {
+      const planService = activePlan.plan_services.find((ps) => ps.service_id === params.serviceId);
+      if (planService) {
+        const monthlyLimit = parseInt(planService.frequency);
+        const countThisMonth = await appointmentsModel.countByClientPhoneAndServiceInMonth(
+          params.clientNumber,
+          params.serviceId,
+          params.preferredAt
+        );
+        console.log(`[BOT][createFromBot] frequência: limit=${monthlyLimit} agendados=${countThisMonth} service_id=${params.serviceId} client=${params.clientNumber}`);
+        if (countThisMonth >= monthlyLimit) {
+          return {
+            success: false,
+            limit_exceeded: true,
+            message: `Limite mensal atingido para este serviço. Seu plano permite ${monthlyLimit}x por mês e você já possui ${countThisMonth} agendamento(s) ativo(s) este mês.`,
+            monthly_limit: monthlyLimit,
+            already_scheduled: countThisMonth,
+          };
+        }
+      }
+    }
+  }
+
   const start = params.preferredAt;
   const end = new Date(start.getTime() + params.durationMinutes * 60000);
 
