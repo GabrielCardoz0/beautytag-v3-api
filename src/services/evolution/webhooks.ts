@@ -44,6 +44,7 @@ const handleEvent = async (params: {event: string, instance: string, data: any})
         // here
         // const isFromMe = false;
 
+        // console.log("HERE "+new Date());
 
         if(data.messageType !== "conversation" || isFromMe) return
 
@@ -59,13 +60,10 @@ const handleEvent = async (params: {event: string, instance: string, data: any})
 
         if (!bot?.is_active || !bot?.is_connected) return;
 
-        // here!!!!!
-        // if(number != 5511994703386) return
-
-
         if (bot.start_time != null && bot.end_time != null) {
           const now = new Date();
-          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          const nowBrasil = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+          const currentMinutes = nowBrasil.getHours() * 60 + nowBrasil.getMinutes();
 
           if (currentMinutes < bot.start_time || currentMinutes >= bot.end_time) {
             if (bot.out_of_turn_msg) {
@@ -82,14 +80,20 @@ const handleEvent = async (params: {event: string, instance: string, data: any})
           await new Promise(resolve => setTimeout(resolve, bot.response_time! * 1000));
         }
 
-        // const user = await usersService.getByWhatsapp(number);
+        try {
+          const botResponse = await getAgentResponse(remoteJid, message, number);
 
-        const botResponse = await getAgentResponse(remoteJid, message, number);
-
-        evolutionApiService.sendMessage({
-          number: remoteJid,
-          text: botResponse ?? "Perdão, não consegui entender sua mensagem. Poderia reformular ou tentar novamente mais tarde?"
-        });
+          await evolutionApiService.sendMessage({
+            number: remoteJid,
+            text: botResponse ?? "Perdão, não consegui entender sua mensagem. Poderia reformular ou tentar novamente mais tarde?"
+          });
+        } catch (agentError) {
+          console.log('[BOT] Erro ao processar mensagem:', agentError);
+          await evolutionApiService.sendMessage({
+            number: remoteJid,
+            text: "Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em instantes."
+          });
+        }
 
         break;
   

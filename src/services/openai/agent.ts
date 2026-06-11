@@ -1,12 +1,8 @@
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import { toolHandlers, tools } from "./tools";
-import { formatWhatsAppNumber } from "../../config/utils";
 import { botService } from "../bot";
-import { evolutionApiService } from "../evolution/service";
 import { usersService } from "../users";
-import { servicesService } from "../services";
-import { appointmentsService } from "../appointments";
 import { chatHistoriesModel } from "../../models/chat_histories";
 import { appointmentsModel } from "../../models/appointments";
 
@@ -33,20 +29,24 @@ const executeToolCall = async (toolCall: ToolCall): Promise<string> => {
 
   console.log(`[BOT][TOOL_CALL] name=${toolCall.function.name} args=${JSON.stringify(args)}`);
 
-  const result = handler
-    ? await handler(args)
-    : { error: `Função não implementada: ${toolCall.function.name}` };
+  try {
+    const result = handler
+      ? await handler(args)
+      : { error: `Função não implementada: ${toolCall.function.name}` };
 
-  console.log(`[BOT][TOOL_RESULT] name=${toolCall.function.name} result=${JSON.stringify(result)}`);
+    console.log(`[BOT][TOOL_RESULT] name=${toolCall.function.name} result=${JSON.stringify(result)}`);
 
-  return JSON.stringify(result);
+    return JSON.stringify(result);
+  } catch (err) {
+    console.log(`[BOT][TOOL_ERROR] name=${toolCall.function.name} erro=${err}`);
+    return JSON.stringify({ error: "Ocorreu um erro ao executar esta ação. Informe o usuário que houve uma falha e peça para tentar novamente." });
+  }
 };
 
 const formatChatHistory = (
   rawHistory: Awaited<ReturnType<typeof chatHistoriesModel.getByChatId>>
 ): ParsedChatMessage[] => {
   return rawHistory.map((entry) => {
-    // Assistant com tool_calls pendentes
     if (entry.role === "assistant" && entry.tool_calls) {
       return {
         role: "assistant" as const,
@@ -55,7 +55,6 @@ const formatChatHistory = (
       };
     }
 
-    // Resultado de tool
     if (entry.role === "tool") {
       return {
         role: "tool" as const,
@@ -64,7 +63,6 @@ const formatChatHistory = (
       };
     }
 
-    // user / assistant simples
     return {
       role: entry.role as "user" | "assistant" | "system",
       content: entry.content ?? "",
@@ -132,6 +130,7 @@ const buildSystemPrompt = (
     `Nome: [${bot.name}]`,
     `Comportamento: [${bot.behavior}]`,
     `Descrição da empresa: [${bot.company_description}]`,
+    `Regra de agendamento: o campo monthly_limit nos serviços do plano indica quantas vezes por mês o cliente pode agendar aquele serviço. Se o cliente quiser agendar múltiplos horários para o mesmo serviço e o total não ultrapassar o monthly_limit do mês corrente, AGENDE TODOS. Só recuse se o total de agendamentos já existentes no mês mais os novos solicitados ultrapassar o monthly_limit.`,
   ];
 
   if (userContext) {
@@ -158,47 +157,9 @@ const buildSystemPrompt = (
   return lines.join(";\n");
 };
 
-// ─── OpenAI Callers ───────────────────────────────────────────────────────────
-
-const callOpenAiWithTools = (
-  systemPrompt: string,
-  history: ParsedChatMessage[],
-  userMessage: string
-) =>
-  openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...history,
-      { role: "user", content: userMessage },
-    ],
-    tools: tools.map((tool) => ({ type: "function" as const, function: tool.function })),
-  });
-
-const callOpenAiAfterToolExecution = (
-  systemPrompt: string,
-  history: ParsedChatMessage[],
-  userMessage: string,
-  assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage,
-  toolResultMessages: ParsedChatMessage[]
-) =>
-  openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...history,
-      { role: "user", content: userMessage },
-      assistantMessage,
-      ...toolResultMessages,
-    ],
-  });
-
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const saveAssistantReply = async (
-  chatId: string,
-  content: string | null
-) => {
+const saveAssistantReply = async (chatId: string, content: string | null) => {
   await chatHistoriesModel.create({
     chat_id: chatId,
     role: "assistant",
@@ -207,13 +168,11 @@ const saveAssistantReply = async (
   });
 };
 
-const saveToolExecutionResult = async (
+const saveToolRound = async (
   chatId: string,
-  finalContent: string | null,
   assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage,
   toolResultMessages: ParsedChatMessage[]
 ) => {
-  // 1. Salva a mensagem do assistant com tool_calls
   await chatHistoriesModel.create({
     chat_id: chatId,
     role: "assistant",
@@ -222,27 +181,22 @@ const saveToolExecutionResult = async (
     tool_calls: JSON.stringify(assistantMessage.tool_calls),
   });
 
-  // 2. Salva cada tool result individualmente
-  for (const toolResult of toolResultMessages) {
-    if (toolResult.role !== "tool") continue;
+  for (const tr of toolResultMessages) {
+    if (tr.role !== "tool") continue;
     await chatHistoriesModel.create({
       chat_id: chatId,
       role: "tool",
-      content: typeof toolResult.content === "string" ? toolResult.content : "",
-      tool_call_id: toolResult.tool_call_id ?? null,
+      content: typeof tr.content === "string" ? tr.content : "",
+      tool_call_id: tr.tool_call_id ?? null,
       is_from_human: false,
     });
   }
-
-  // 3. Salva a resposta final do assistant após a tool
-  await chatHistoriesModel.create({
-    chat_id: chatId,
-    role: "assistant",
-    content: finalContent ?? "",
-    is_from_human: false,
-  });
 };
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+const MAX_TOOL_ITERATIONS = 5;
+const toolDefs = tools.map((t) => ({ type: "function" as const, function: t.function }));
 
 export const getAgentResponse = async (
   chatId: string,
@@ -253,13 +207,12 @@ export const getAgentResponse = async (
   const bot = await botService.get();
   if (!bot) return null;
 
-  // Busca histórico e contexto do usuário
   const [userContext, rawHistory] = await Promise.all([
     fetchUserContext(phoneNumber),
     chatHistoriesModel.getByChatId(chatId),
   ]);
 
-  // ✅ Salva mensagem do usuário APÓS buscar o histórico (evita duplicata na chamada à OpenAI)
+  // Salva mensagem do usuário APÓS buscar o histórico (evita duplicata na chamada à OpenAI)
   await chatHistoriesModel.create({
     chat_id: chatId,
     role: "user",
@@ -268,35 +221,41 @@ export const getAgentResponse = async (
   });
 
   const systemPrompt = buildSystemPrompt(bot, userContext);
-  const formattedHistory = formatChatHistory(rawHistory);
 
-  const firstResponse = await callOpenAiWithTools(systemPrompt, formattedHistory, userMessage);
-  const assistantMessage = firstResponse.choices[0].message;
+  const messages: ParsedChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    ...formatChatHistory(rawHistory),
+    { role: "user", content: userMessage },
+  ];
 
-  if (!assistantMessage.tool_calls?.length) {
-    await saveAssistantReply(chatId, assistantMessage.content);
-    return assistantMessage.content;
+  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      tools: toolDefs,
+    });
+
+    const assistantMessage = response.choices[0].message;
+
+    // Sem tool calls — resposta final
+    if (!assistantMessage.tool_calls?.length) {
+      await saveAssistantReply(chatId, assistantMessage.content);
+      return assistantMessage.content;
+    }
+
+    // Executa todas as tool calls desta rodada
+    const toolResultMessages: ParsedChatMessage[] = await Promise.all(
+      assistantMessage.tool_calls.map(async (toolCall) => ({
+        role: "tool" as const,
+        tool_call_id: toolCall.id,
+        content: await executeToolCall(toolCall as ToolCall),
+      }))
+    );
+
+    // Persiste rodada e adiciona ao contexto para próxima iteração
+    await saveToolRound(chatId, assistantMessage, toolResultMessages);
+    messages.push(assistantMessage, ...toolResultMessages);
   }
 
-  const toolResultMessages: ParsedChatMessage[] = await Promise.all(
-    assistantMessage.tool_calls.map(async (toolCall) => ({
-      role: "tool" as const,
-      tool_call_id: toolCall.id,
-      content: await executeToolCall(toolCall as ToolCall),
-    }))
-  );
-
-  const postToolResponse = await callOpenAiAfterToolExecution(
-    systemPrompt,
-    formattedHistory,
-    userMessage,
-    assistantMessage,
-    toolResultMessages
-  );
-
-  const finalContent = postToolResponse.choices[0].message.content;
-
-  await saveToolExecutionResult(chatId, finalContent, assistantMessage, toolResultMessages);
-
-  return finalContent;
+  return "Não consegui concluir sua solicitação no momento. Por favor, tente novamente.";
 };

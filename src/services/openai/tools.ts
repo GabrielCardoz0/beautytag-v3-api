@@ -35,7 +35,7 @@ export const tools = [
     function: {
       name: "getClientByWhatsapp",
       description:
-        "Busca um cliente cadastrado pelo número de WhatsApp. Use para verificar se o cliente já possui cadastro, obter o nome, plano ativo e histórico.",
+        "Busca um cliente cadastrado pelo número de WhatsApp. Retorna dados do cliente incluindo plano ativo e serviços contratados. Use esta tool antes de qualquer agendamento ou consulta de plano.",
       parameters: {
         type: "object",
         properties: {
@@ -57,7 +57,7 @@ export const tools = [
     function: {
       name: "getClientPlan",
       description:
-        "Retorna o plano ativo do cliente e os serviços incluídos nele (frequência, nome do serviço, etc.). Use para verificar e obter informações do contratado deste cliente",
+        "Retorna o plano ativo do cliente e os serviços incluídos. O campo monthly_limit indica quantas vezes por mês o cliente pode agendar aquele serviço. O cliente pode agendar até esse número de vezes no mês corrente.",
       parameters: {
         type: "object",
         properties: {
@@ -236,16 +236,21 @@ const handleScheduleAppointment = async (args: {
     return { success: false, message: "Serviço não pertence a este parceiro." };
   }
 
-  const result = await appointmentsService.createFromBot({
-    partnerId: partnerByService.id,
-    clientNumber,
-    clientName: args.name,
-    serviceId: args.service_id,
-    preferredAt: new Date(args.preferred_datetime),
-    durationMinutes: service.spent_time ?? 60,
-  });
-  console.log(`[BOT][scheduleAppointment] resultado createFromBot: ${JSON.stringify(result)}`);
-  return result;
+  try {
+    const result = await appointmentsService.createFromBot({
+      partnerId: partnerByService.id,
+      clientNumber,
+      clientName: args.name,
+      serviceId: args.service_id,
+      preferredAt: new Date(args.preferred_datetime),
+      durationMinutes: service.spent_time ?? 60,
+    });
+    console.log(`[BOT][scheduleAppointment] resultado createFromBot: ${JSON.stringify(result)}`);
+    return result;
+  } catch (err) {
+    console.log(`[BOT][scheduleAppointment] erro ao criar agendamento: ${err}`);
+    return { success: false, message: "Erro ao criar o agendamento. Por favor, tente novamente ou entre em contato conosco." };
+  }
 };
 
 const handleCancelAppointment = async (args: {
@@ -294,6 +299,17 @@ const getClientByWhatsapp = async (params: { whatsapp: string; }): Promise<objec
       role: user.role,
       confirmed: user.confirmed,
       blocked: user.blocked,
+      plans: user.plans?.map((plan) => ({
+        plan_id: plan.id,
+        status: plan.status,
+        services: plan.plan_services?.map((ps) => ({
+          service_id: ps.service_id,
+          service_name: (ps.service as any)?.name,
+          monthly_limit: parseInt(ps.frequency) || 1,
+          duration_minutes: (ps.service as any)?.spent_time,
+          price: (ps.service as any)?.price,
+        })) ?? [],
+      })) ?? [],
     };
   } catch (err) {
     console.log(`[BOT][getClientByWhatsapp] erro: ${err}`);
@@ -316,7 +332,7 @@ const getClientPlan = async (params: { user_id: number; }): Promise<object> => {
       services: plan.plan_services?.map((ps) => ({
         service_id: ps.service_id,
         service_name: ps.service?.name,
-        frequency: ps.frequency,
+        monthly_limit: parseInt(ps.frequency) || 1,
         duration_minutes: ps.service?.spent_time,
         price: ps.service?.price,
       })) ?? [],
