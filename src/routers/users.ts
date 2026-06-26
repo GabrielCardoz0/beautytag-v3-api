@@ -21,6 +21,7 @@ export interface ICreateParceiro {
     bairro?: string; // Bairro (ex: "Bela Vista")
     cidade?: string; // Cidade (ex: "São Paulo")
     estado?: string; // Estado (ex: "SP")
+    instagram?: string; // Instagram (ex: "@meu_estabelecimento")
   };
 }
 
@@ -37,6 +38,7 @@ export interface IUpdateParceiro {
     bairro?: string,
     cidade?: string,
     estado?: string,
+    instagram?: string,
   }
 }
 
@@ -63,7 +65,8 @@ const UserSchema = Joi.object<ICreateParceiro>({
     numero: Joi.string().optional().allow(''),
     bairro: Joi.string().optional().allow(''),
     cidade: Joi.string().optional().allow(''),
-    estado: Joi.string().optional().allow('').max(2)
+    estado: Joi.string().optional().allow('').max(2),
+    instagram: Joi.string().optional().allow(''),
   }).required()
 });
 
@@ -80,6 +83,7 @@ const UpdateParceiroSchema = Joi.object<IUpdateParceiro>({
     bairro: Joi.string().optional(),
     cidade: Joi.string().optional(),
     estado: Joi.string().optional(),
+    instagram: Joi.string().optional().allow(''),
   })
   
 });

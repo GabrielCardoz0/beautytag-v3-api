@@ -74,6 +74,7 @@ async function update(id: number, payload: IUpdateParceiro) {
       bairro: payload.metadata?.bairro ?? (user.metadata as any).bairro,
       cidade: payload.metadata?.cidade ?? (user.metadata as any).cidade,
       estado: payload.metadata?.estado ?? (user.metadata as any).estado,
+      instagram: payload.metadata?.instagram ?? (user.metadata as any).instagram ?? null,
     },
   };
 

@@ -78,7 +78,7 @@ export const tools = [
     function: {
       name: "getPartnerByServiceId",
       description:
-        "Busca informações sobre o parceiro com base no serviço selecionado para agendamento. Retorna id, nome e whatsapp e mais informações. Use quando o cliente quiser agendar.",
+        "Busca informações sobre o parceiro com base no serviço selecionado para agendamento. Retorna id, nome, whatsapp, instagram e mais informações. Use quando o cliente quiser agendar ou quiser conhecer melhor o parceiro/estabelecimento.",
       parameters: {
         type: "object",
         properties: {
@@ -352,13 +352,14 @@ const getPartnerByServiceId = async (params: { service_id: number; }): Promise<o
       return { found: false, message: "Nenhum parceiro disponível." };
     }
 
-    const metadata = partner.metadata as { whatsapp?: string } | null;
+    const metadata = partner.metadata as { whatsapp?: string; instagram?: string } | null;
 
     return {
       found: true,
       id: partner.id,
       name: partner.name,
       whatsapp: metadata?.whatsapp ?? null,
+      instagram: metadata?.instagram ?? null,
       role: partner.role,
       confirmed: partner.confirmed,
     };
