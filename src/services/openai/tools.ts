@@ -4,6 +4,7 @@ import { appointmentsModel } from "../../models/appointments";
 import { usersModel } from "../../models/users";
 import { appointmentsService } from "../appointments";
 import { evolutionApiService } from "../evolution/service";
+import { EnumRoles } from "../middlewares/validate-role";
 import { plansService } from "../plans";
 import { servicesService } from "../services";
 import { usersService } from "../users";
@@ -234,6 +235,10 @@ const handleScheduleAppointment = async (args: {
   if (!service || service.user_id !== partnerByService.id) {
     console.log(`[BOT][scheduleAppointment] service.user_id=${service?.user_id} != partner.id=${partnerByService.id}`);
     return { success: false, message: "Serviço não pertence a este parceiro." };
+  }
+  if (service.created_by !== EnumRoles.admin) {
+    console.log(`[BOT][scheduleAppointment] service ${service.id} created_by=${service.created_by}, bot não tem acesso a serviços de parceiro`);
+    return { success: false, message: "Serviço não encontrado." };
   }
 
   try {

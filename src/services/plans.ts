@@ -40,6 +40,8 @@ async function deletePlan(plan_id: number) {
 
 async function create(payload: ICreatePlan) {
 
+  await Promise.all(payload.plan_services.map((item) => servicesService.assertAdminService(item.id)));
+
   const createdPlan = await plansModel.create({
     status: EnumPlanStatus.aguardandoPgto,
     users: {
@@ -103,7 +105,7 @@ async function update(plan_id: number, payload: Prisma.plansUpdateInput) {
 async function addService(plan_id: number, payload: { service_id: number, frequency: string }) {
   const plan = await getById(plan_id);
 
-  await servicesService.getById(payload.service_id);
+  await servicesService.assertAdminService(payload.service_id);
 
   if (plan!.plan_services!.find(i => i.plan_id === payload.service_id)) {
     throw new Error("Este plano já contém este serviço.");
