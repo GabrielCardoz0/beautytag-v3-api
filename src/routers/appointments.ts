@@ -28,6 +28,7 @@ const AppointmentsSchema = Joi.object<ICreateAppointment>({
 
 appointmentsRouter
   .use(authenticateToken)
+  .get("/earnings", validateRole([EnumRoles.parceiro]), appointmentsController.getEarningsSummary)
   .get("/", validateRole([EnumRoles.admin, EnumRoles.parceiro]), appointmentsController.get)
   .post("/", validateRole([EnumRoles.admin, EnumRoles.parceiro, EnumRoles.bot]), validateBody(AppointmentsSchema), appointmentsController.create)
   .put("/", validateRole([EnumRoles.admin, EnumRoles.parceiro, EnumRoles.bot]), validateBody(AppointmentsSchema), appointmentsController.update)

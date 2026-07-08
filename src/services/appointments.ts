@@ -135,6 +135,10 @@ async function createFromBot(params: {
   return { success: true, appointment: created };
 }
 
+async function getEarningsSummary(partnerId: number) {
+  return appointmentsModel.getEarningsSummary(partnerId);
+}
+
 export const appointmentsService = {
   getAll,
   getById,
@@ -142,5 +146,6 @@ export const appointmentsService = {
   delete: deleteAppointments,
   create,
   update,
-  createFromBot
+  createFromBot,
+  getEarningsSummary,
 }

@@ -63,6 +63,16 @@ async function deleteAppointment(req: AuthenticatedRequest, res: Response, next:
   }
 }
 
+async function getEarningsSummary(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const earnings = await appointmentsService.getEarningsSummary(req.user!.id);
+
+    return res.send({ earnings });
+  } catch (error) {
+    return errorHandler(error, req, res);
+  }
+}
+
 export const appointmentsController = {
   getAll,
   get,
@@ -70,4 +80,5 @@ export const appointmentsController = {
   create,
   update,
   delete: deleteAppointment,
+  getEarningsSummary,
 }

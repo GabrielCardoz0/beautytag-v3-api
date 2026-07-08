@@ -210,6 +210,42 @@ const countByClientPhoneAndServiceInMonth = async (
   });
 };
 
+async function getEarningsSummary(partnerId: number) {
+  const now = new Date();
+
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const [todayResult, monthResult] = await Promise.all([
+    prisma.$queryRaw<[{ total: bigint | null }]>`
+      SELECT COALESCE(SUM(s.price), 0) AS total
+      FROM appointments a
+      JOIN appointments_services aps ON aps.appointment_id = a.id
+      JOIN services s ON s.id = aps.service_id
+      WHERE a.user_id = ${partnerId}
+        AND a.status != ${EnumStatus.cancelado}
+        AND a.start_at BETWEEN ${startOfDay} AND ${endOfDay}
+    `,
+    prisma.$queryRaw<[{ total: bigint | null }]>`
+      SELECT COALESCE(SUM(s.price), 0) AS total
+      FROM appointments a
+      JOIN appointments_services aps ON aps.appointment_id = a.id
+      JOIN services s ON s.id = aps.service_id
+      WHERE a.user_id = ${partnerId}
+        AND a.status != ${EnumStatus.cancelado}
+        AND a.start_at BETWEEN ${startOfMonth} AND ${endOfMonth}
+    `,
+  ]);
+
+  return {
+    today: Number(todayResult[0]?.total ?? 0),
+    month: Number(monthResult[0]?.total ?? 0),
+  };
+}
+
 export const appointmentsModel = {
   get,
   getById,
@@ -223,4 +259,5 @@ export const appointmentsModel = {
   countPastByClientPhone,
   getByPartnerAndDateRange,
   countByClientPhoneAndServiceInMonth,
+  getEarningsSummary,
 };
