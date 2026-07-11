@@ -65,7 +65,7 @@ async function deleteAppointment(req: AuthenticatedRequest, res: Response, next:
 
 async function getEarningsSummary(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
-    const earnings = await appointmentsService.getEarningsSummary(req.user!.id);
+    const earnings = await appointmentsService.getEarningsSummary(req.user!.id, req.query.date as string | undefined);
 
     return res.send({ earnings });
   } catch (error) {

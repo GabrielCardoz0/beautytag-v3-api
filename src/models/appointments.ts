@@ -210,14 +210,14 @@ const countByClientPhoneAndServiceInMonth = async (
   });
 };
 
-async function getEarningsSummary(partnerId: number) {
-  const now = new Date();
+async function getEarningsSummary(partnerId: number, referenceDate?: Date) {
+  const ref = referenceDate ?? new Date();
 
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfDay = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+  const endOfDay = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate(), 23, 59, 59, 999);
 
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const startOfMonth = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const endOfMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0, 23, 59, 59, 999);
 
   const [todayResult, monthResult] = await Promise.all([
     prisma.$queryRaw<[{ total: bigint | null }]>`

@@ -135,8 +135,10 @@ async function createFromBot(params: {
   return { success: true, appointment: created };
 }
 
-async function getEarningsSummary(partnerId: number) {
-  return appointmentsModel.getEarningsSummary(partnerId);
+async function getEarningsSummary(partnerId: number, date?: string) {
+  const referenceDate = date ? new Date(date) : undefined;
+  if (referenceDate && isNaN(referenceDate.getTime())) throw new Error("Data inválida.");
+  return appointmentsModel.getEarningsSummary(partnerId, referenceDate);
 }
 
 export const appointmentsService = {
