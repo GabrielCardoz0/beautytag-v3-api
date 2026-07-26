@@ -91,6 +91,13 @@ async function getByWhatsapp(whatsapp: string) {
   return usersModel.getByWhatsapp(normalized);
 }
 
+async function getClientNameByPhone(phone: string) {
+  const normalized = phone.replace(/\D/g, "");
+  const name = await usersModel.getNameByWhatsapp(normalized);
+
+  return { client_name: name };
+}
+
 
 export const usersService = {
   getAll,
@@ -100,4 +107,5 @@ export const usersService = {
   create,
   update,
   getByWhatsapp,
+  getClientNameByPhone,
 };

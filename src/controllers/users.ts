@@ -38,6 +38,20 @@ async function getById(req: AuthenticatedRequest, res: Response, next: NextFunct
   }
 }
 
+async function getClientByPhone(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const phone = req.query.phone as string | undefined;
+
+    if (!phone) return res.status(400).send({ message: "O parâmetro 'phone' é obrigatório." });
+
+    const client = await usersService.getClientNameByPhone(phone);
+
+    return res.send({ client });
+  } catch (error) {
+    return errorHandler(error, req, res);
+  }
+}
+
 async function create(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     const user = await usersService.create(req.body);
@@ -72,6 +86,7 @@ export const usersController = {
   getAll,
   getMe,
   getById,
+  getClientByPhone,
   create,
   delete: deleteUser,
   update,

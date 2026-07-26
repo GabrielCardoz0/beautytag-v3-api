@@ -85,6 +85,30 @@ async function getByWhatsapp(whatsapp: string) {
 }
 
 
+async function getNameByWhatsapp(whatsapp: string) {
+  const variants = buildPhoneVariants(whatsapp);
+
+  const user = await prisma.users.findFirst({
+    orderBy: {
+      id: "desc",
+    },
+    select: {
+      name: true,
+    },
+    where: {
+      role: EnumRoles.colaborador,
+      OR: variants.map((variant) => ({
+        metadata: {
+          path: ["whatsapp"],
+          equals: variant,
+        },
+      })),
+    },
+  });
+
+  return user?.name ?? null;
+}
+
 async function create(data: Prisma.usersCreateInput) {
   return prisma.users.create({
     data,
@@ -174,6 +198,7 @@ export const usersModel = {
   delete: deleteUser,
   getAll,
   getByWhatsapp,
+  getNameByWhatsapp,
   getByServiceId,
   findAdmin,
 };
