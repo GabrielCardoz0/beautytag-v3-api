@@ -63,6 +63,20 @@ async function deleteAppointment(req: AuthenticatedRequest, res: Response, next:
   }
 }
 
+async function getClientByPhone(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const phone = req.query.phone as string | undefined;
+
+    if (!phone) return res.status(400).send({ message: "O parâmetro 'phone' é obrigatório." });
+
+    const client = await appointmentsService.getClientNameByPhone(req.user!, phone);
+
+    return res.send({ client });
+  } catch (error) {
+    return errorHandler(error, req, res);
+  }
+}
+
 async function getEarningsSummary(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     const earnings = await appointmentsService.getEarningsSummary(req.user!.id, req.query.date as string | undefined);
@@ -80,5 +94,6 @@ export const appointmentsController = {
   create,
   update,
   delete: deleteAppointment,
+  getClientByPhone,
   getEarningsSummary,
 }

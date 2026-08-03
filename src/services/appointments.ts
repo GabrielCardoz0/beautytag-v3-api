@@ -135,6 +135,14 @@ async function createFromBot(params: {
   return { success: true, appointment: created };
 }
 
+async function getClientNameByPhone(user: { id: number, role: string }, phone: string) {
+  const userId = user.role === EnumRoles.admin ? undefined : user.id;
+
+  const client_name = await appointmentsModel.getLatestClientNameByPhone(phone, userId);
+
+  return { client_name };
+}
+
 async function getEarningsSummary(partnerId: number, date?: string) {
   const referenceDate = date ? new Date(date) : undefined;
   if (referenceDate && isNaN(referenceDate.getTime())) throw new Error("Data inválida.");
@@ -149,5 +157,6 @@ export const appointmentsService = {
   create,
   update,
   createFromBot,
+  getClientNameByPhone,
   getEarningsSummary,
 }

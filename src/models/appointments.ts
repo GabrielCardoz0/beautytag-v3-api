@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma";
 import { Prisma } from "../generated/prisma/client";
+import { buildPhoneVariants } from "../config/utils";
 import { IQueryPagination } from "./services";
 
 export interface IQueryPaginationDateRange extends IQueryPagination {
@@ -141,6 +142,21 @@ async function findNextAvailableSlots(userId: number, from: Date, durationMinute
   return slots;
 }
 
+const getLatestClientNameByPhone = async (phone: string, userId?: number) => {
+  const variants = buildPhoneVariants(phone);
+
+  const appointment = await prisma.appointments.findFirst({
+    where: {
+      client_phone: { in: variants },
+      ...(userId ? { user_id: userId } : {}),
+    },
+    orderBy: { created_at: "desc" },
+    select: { client_name: true },
+  });
+
+  return appointment?.client_name ?? null;
+}
+
 const getUpcomingByClientPhone = async (phone: string) => {
   return prisma.appointments.findMany({
     where: {
@@ -255,6 +271,7 @@ export const appointmentsModel = {
   getAll,
   findByUserAndInterval,
   findNextAvailableSlots,
+  getLatestClientNameByPhone,
   getUpcomingByClientPhone,
   countPastByClientPhone,
   getByPartnerAndDateRange,

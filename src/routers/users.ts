@@ -92,7 +92,6 @@ usersRouter
   .use(authenticateToken)
   .get("/me", usersController.getMe)
   .get("/", validateRole([EnumRoles.admin]), usersController.getAll)
-  .get("/client", validateRole([EnumRoles.admin, EnumRoles.parceiro]), usersController.getClientByPhone)
   .get("/:id", validateRole([EnumRoles.admin]), usersController.getById)
   .post("/", validateRole([EnumRoles.admin]), validateBody(UserSchema), usersController.create)
   .delete("/:id", validateRole([EnumRoles.admin]), usersController.delete)
