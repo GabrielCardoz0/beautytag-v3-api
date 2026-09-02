@@ -18,7 +18,7 @@ async function getById(id: number) {
 async function assertAdminService(id: number) {
   const service = await getById(id);
 
-  if(service.created_by !== EnumRoles.admin) throw new Error("Este serviço foi cadastrado por um parceiro e não pode ser usado em planos.");
+  if(!service.is_complete) throw new Error("Este serviço ainda não foi completado por um administrador e não pode ser usado em planos.");
 
   return service;
 }
