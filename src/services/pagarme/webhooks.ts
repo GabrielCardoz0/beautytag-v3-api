@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
-import { invoicesService } from "../invoices";
 import { notificationsService, EnumNotificationType } from "../notifications";
 import { EnumPlanStatus } from "../plans";
 
@@ -16,17 +15,23 @@ async function pagarmeWebhook(req: Request, res: Response) {
 
     // Em order.paid, data é o order. Em charge.paid, data é a charge com order_id.
     const orderId: string = data.order_id ?? data.id;
+    const orderCode: string | undefined = data.code ?? data.order?.code;
     const paidAt: string = data.paid_at ?? data.last_transaction?.paid_at ?? new Date().toISOString();
 
-    const invoice = await prisma.invoices.findFirst({
-      where: { pagarme_transaction_id: orderId },
-    });
+    // order_code é o id da invoice, definido na criação do link de pagamento.
+    // Fallback pelo pagarme_transaction_id cobre invoices criadas antes da migração para /paymentlinks.
+    const invoice = orderCode
+      ? await prisma.invoices.findUnique({ where: { id: Number(orderCode) } })
+      : await prisma.invoices.findFirst({ where: { pagarme_transaction_id: orderId } });
 
     if (!invoice) {
       return res.status(200).send({ message: "Invoice não encontrada para este order" });
     }
 
-    await invoicesService.update(orderId, "pago", new Date(paidAt));
+    await prisma.invoices.update({
+      where: { id: invoice.id },
+      data: { status: "pago", payment_date: new Date(paidAt) },
+    });
 
     await prisma.plans.updateMany({
       where: { user_id: invoice.user_id },

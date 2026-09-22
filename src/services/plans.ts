@@ -70,9 +70,7 @@ async function create(payload: ICreatePlan) {
 
   const client = { ...payload, ...payload.metadata };
 
-  const { paymentUrl, orderId } = await pagarmeApi.createPaymentLink(planValue, client, createdPlan.plan_services);
-
-  await invoicesService.create({
+  const invoice = await invoicesService.create({
     user: {
       connect: {
         id: createdPlan.user_id
@@ -80,7 +78,19 @@ async function create(payload: ICreatePlan) {
     },
     amount: planValue,
     status: "pendente",
-    pagarme_transaction_id: orderId
+    pagarme_transaction_id: "pending"
+  });
+
+  const { paymentUrl, linkId } = await pagarmeApi.createPaymentLink(
+    planValue,
+    client,
+    createdPlan.plan_services,
+    String(invoice.id)
+  );
+
+  await prisma.invoices.update({
+    where: { id: invoice.id },
+    data: { pagarme_transaction_id: linkId }
   });
 
   await evolutionApiService.sendMessage({
@@ -200,12 +210,17 @@ async function chargeAguardandoPgto() {
           whatsapp: metadata.whatsapp,
         };
 
-        const result = await pagarmeApi.createPaymentLink(planValue, client, plan.plan_services);
+        const result = await pagarmeApi.createPaymentLink(
+          planValue,
+          client,
+          plan.plan_services,
+          String(invoice.id)
+        );
         paymentUrl = result.paymentUrl;
 
         await prisma.invoices.update({
           where: { id: invoice.id },
-          data: { pagarme_transaction_id: result.orderId },
+          data: { pagarme_transaction_id: result.linkId },
         });
       }
 

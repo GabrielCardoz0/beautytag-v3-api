@@ -30,8 +30,9 @@ interface PlanServiceForSplit {
 async function createPaymentLink(
   amount: number,
   client: { name: string; email: string; cpf: string; whatsapp: string },
-  planServices: PlanServiceForSplit[]
-): Promise<{ paymentUrl: string; orderId: string }> {
+  planServices: PlanServiceForSplit[],
+  orderCode: string
+): Promise<{ paymentUrl: string; linkId: string }> {
   try {
     const beautyTagRecipientId = process.env.PAGARME_BEAUTY_TAG_RECIPIENT_ID!;
     const splitMap = new Map<string, number>();
@@ -52,7 +53,7 @@ async function createPaymentLink(
       }
     }
 
-    const split = Array.from(splitMap.entries()).map(([recipient_id, splitAmount]) => ({
+    const rules = Array.from(splitMap.entries()).map(([recipient_id, splitAmount]) => ({
       recipient_id,
       amount: splitAmount,
       type: "flat",
@@ -63,44 +64,55 @@ async function createPaymentLink(
       },
     }));
 
-    const response = await pagarme.post("/orders", {
-      items: [
-        {
-          amount: amount,
-          description: `PLANO BEAUTY TAG - ${client.name} | ${client.cpf}`,
-          quantity: 1
-        }
-      ],
-      customer: {
-        name: client.name,
-        email: client.email,
-        type: "individual",
-        document: client.cpf.replace(/\D/g, ""),
-        document_type: "CPF",
-        phones: {
-          mobile_phone: {
-            country_code: "55",
-            area_code: client.whatsapp.replace(/\D/g, "").slice(0, 2),
-            number: client.whatsapp.replace(/\D/g, "").slice(2)
+    const response = await pagarme.post("/paymentlinks", {
+      type: "order",
+      name: `PLANO BEAUTY TAG - ${client.name}`.slice(0, 64),
+      order_code: orderCode,
+      max_paid_sessions: 1,
+      payment_settings: {
+        accepted_payment_methods: ["credit_card"],
+        credit_card_settings: {
+          installments_setup: {
+            interest_type: "simple"
           }
         }
       },
-      payments: [
-        {
-          payment_method: "checkout",
-          checkout: {
-            success_url: "https://google.com",
-            customer_editable: true,
-            accepted_payment_methods: ["credit_card"]
-          },
-          split
+      customer_settings: {
+        customer: {
+          name: client.name,
+          email: client.email,
+          type: "individual",
+          document: client.cpf.replace(/\D/g, ""),
+          document_type: "CPF",
+          phones: {
+            mobile_phone: {
+              country_code: "55",
+              area_code: client.whatsapp.replace(/\D/g, "").slice(0, 2),
+              number: client.whatsapp.replace(/\D/g, "").slice(2)
+            }
+          }
         }
-      ]
+      },
+      cart_settings: {
+        items: [
+          {
+            name: `PLANO BEAUTY TAG - ${client.name} | ${client.cpf}`.slice(0, 64),
+            amount: amount,
+            default_quantity: 1
+          }
+        ]
+      },
+      split_settings: {
+        rules
+      },
+      flow_settings: {
+        success_url: "https://google.com"
+      }
     });
 
     return {
-      paymentUrl: response.data.checkouts[0].payment_url,
-      orderId: response.data.id,
+      paymentUrl: response.data.url,
+      linkId: response.data.id,
     };
   } catch (error: any) {
     console.log(error?.response?.data ?? error);
@@ -108,10 +120,13 @@ async function createPaymentLink(
   }
 }
 
-async function getPaymentUrl(orderId: string): Promise<string | null> {
+async function getPaymentUrl(linkId: string): Promise<string | null> {
   try {
-    const response = await pagarme.get(`/orders/${orderId}`);
-    return response.data.checkouts?.[0]?.payment_url ?? null;
+    const response = await pagarme.get(`/paymentlinks/${linkId}`);
+
+    if (response.data.status !== "active") return null;
+
+    return response.data.url ?? null;
   } catch (error: any) {
     console.log(error?.response?.data ?? error);
     return null;
