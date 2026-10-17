@@ -6,6 +6,39 @@ import { EnumRoles } from "./middlewares/validate-role";
 import { notificationsService, EnumNotificationType } from "./notifications";
 import { usersService } from "./users";
 import { EnumPlanStatus } from "./plans";
+import { evolutionApiService } from "./evolution/service";
+
+function formatAppointmentDateTime(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(date);
+}
+
+async function notifyPartnerNewAppointment(params: {
+  partnerId: number;
+  clientName: string;
+  serviceName?: string;
+  startAt: Date;
+}) {
+  try {
+    const partner = await usersService.getById(params.partnerId);
+    const whatsapp = (partner.metadata as any)?.whatsapp;
+
+    if (!whatsapp) return;
+
+    const when = formatAppointmentDateTime(params.startAt);
+    const text = `Olá, ${partner.name}! Você tem um novo agendamento.\n\n`
+      + `Cliente: ${params.clientName}\n`
+      + (params.serviceName ? `Serviço: ${params.serviceName}\n` : "")
+      + `Data/Hora: ${when}`;
+
+    await evolutionApiService.sendMessage({ number: whatsapp, text });
+  } catch (error) {
+    console.error("[appointments] Falha ao notificar prestador via WhatsApp:", error);
+  }
+}
 
 async function getAll(query: IQueryPaginationDateRange) {
   return await appointmentsModel.getAll(query);
@@ -44,7 +77,7 @@ async function create(user: { id: number, role: string }, payload: ICreateAppoin
 
   if(!service) throw new Error("Serviço não encontrado.");
 
-  return appointmentsModel.create({
+  const appointment = await appointmentsModel.create({
     ...data,
     status: EnumStatus.agendado,
     user: {
@@ -58,6 +91,15 @@ async function create(user: { id: number, role: string }, payload: ICreateAppoin
       }
     }
   });
+
+  notifyPartnerNewAppointment({
+    partnerId: service.user_id,
+    clientName: data.client_name,
+    serviceName: service.name,
+    startAt: data.start_at,
+  });
+
+  return appointment;
 }
 
 async function update(user: { role: string, id: number }, appointment_id: number, payload: Prisma.appointmentsUpdateInput) {
@@ -131,6 +173,14 @@ async function createFromBot(params: {
   };
 
   const created = await appointmentsModel.create(appointmentData);
+
+  const service = await servicesModel.getById(params.serviceId);
+  notifyPartnerNewAppointment({
+    partnerId: params.partnerId,
+    clientName: params.clientName,
+    serviceName: service?.name,
+    startAt: start,
+  });
 
   return { success: true, appointment: created };
 }
