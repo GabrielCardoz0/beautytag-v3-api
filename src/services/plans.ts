@@ -33,9 +33,8 @@ async function get(query?: IQueryPagination) {
 
 async function deletePlan(plan_id: number) {
   const plan = await getById(plan_id);
-  plansModel.delete(plan_id);
-  await usersService.delete(plan.user_id)
-
+  // Deletar o usuário já remove o plano em cascata (onDelete: Cascade em plans.user_id).
+  await usersService.delete(plan.user_id);
 }
 
 async function create(payload: ICreatePlan) {
